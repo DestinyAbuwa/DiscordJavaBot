@@ -1,0 +1,24 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+
+# Secret Credentials
+config.json
+.env
+
+# IntelliJ files
+.idea/
+*.iml
+out/
+
+# Eclipse files
+.project
+.classpath
+.settings/
+bin/
+
+# Maven build output
+target/
+
+# Log files
+*.log

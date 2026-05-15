@@ -33,9 +33,9 @@ package pigDiceGame;
 public class PigDice
 {
 	// keep track of total and round scores as well as the two dice.
-	private int _totalScore = 0;
-	private int _roundScore = 0;
-	private int addingRoundScore = 0;
+    // Replace your old score variables with just these two clear metrics:
+    private int _totalScore = 0;   // The permanent banked score
+    private int _roundScore = 0;   // The running score for the active turn
 	private Die _die1;
 	private Die _die2;
 	
@@ -53,13 +53,9 @@ public class PigDice
 	}
 
 	// accessor for this round score
-	public int currentRound()
-	{
-		addingRoundScore += _roundScore;
-		return addingRoundScore;
-			
-
-	}
+    public int currentRound() {
+        return _roundScore; // Just returns the value safely without altering it
+    }
 
 	// accessor to see if the user has rolled a single "1" and loses turn
 	public boolean piggedOut()
@@ -87,26 +83,16 @@ public class PigDice
 		return "D1 (" + _die1.faceValue() + "), D2 (" + _die2.faceValue() + ")";
 	}
 
-	public int evaluate()
-	{	    
-		if(piggedOut())
-		{
-			_roundScore = 0;
-			addingRoundScore = 0;
-		}
-		else if (doubleOnesRolled())
-        {
-        	_roundScore = 25;
-
+    public int evaluate() {
+        if (piggedOut()) {
+            _roundScore = 0;
+        } else if (doubleOnesRolled()) {
+            _roundScore += 25; // Accumulate double 1s to current turn
+        } else {
+            _roundScore += (_die1.faceValue() + _die2.faceValue()); // Accumulate standard rolls
         }
-		else
-		{
-			_roundScore = _die1.faceValue() + _die2.faceValue();
-			
-		}
-
         return _roundScore;
-	}
+    }
 
 	private boolean singleOneRolled()
 	{
@@ -132,13 +118,10 @@ public class PigDice
 	// mutator to end a round and keep the add this round to the total
 	// also returns the total value of the round and resets the round total for next time
 	//
-	public int save()
-	{
-		int roundScore = addingRoundScore;
-		_roundScore = 0;
-		_totalScore += addingRoundScore;
-		addingRoundScore = 0;
-        return roundScore;
-   
-	}
+    public int save() {
+        int pointsSaved = _roundScore;
+        _totalScore += _roundScore; // Bank the round points permanently
+        _roundScore = 0;            // Reset the turn counter back to zero
+        return pointsSaved;
+    }
 }

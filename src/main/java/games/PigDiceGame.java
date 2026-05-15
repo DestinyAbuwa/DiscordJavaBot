@@ -91,11 +91,11 @@ public class PigDiceGame extends ListenerAdapter
     			
     			player2 = event.getMember().getNickname();
     			
-    			if (player1.equals(player2))
-    			{
-    				event.getChannel().sendMessage("you already joined " + player2).queue();
-    			}
-    			else
+//    			if (player1.equals(player2))
+//    			{
+//    				event.getChannel().sendMessage("you already joined " + player2).queue();
+//    			}
+//    			else
     			{
     				msg.delete().queue();
         			eb.setDescription("READY TO PLAY?? \r\nRed X to quit");

@@ -57,6 +57,10 @@ public class PigDice
         return _roundScore; // Just returns the value safely without altering it
     }
 
+    public void clearTurnPool() {
+        this._roundScore = 0;
+    }
+
 	// accessor to see if the user has rolled a single "1" and loses turn
 	public boolean piggedOut()
 	{

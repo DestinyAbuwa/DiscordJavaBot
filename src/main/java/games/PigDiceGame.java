@@ -2,385 +2,234 @@ package games;
 
 import java.awt.Color;
 import org.jetbrains.annotations.NotNull;
-import events.MessageEventListener;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
-import net.dv8tion.jda.api.events.message.MessageEmbedEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import pigDiceGame.EntryPoint;
-import pigDiceGame.GameController;
 import pigDiceGame.PigDice;
 
 public class PigDiceGame extends ListenerAdapter
 {
-	private EmbedBuilder eb = new EmbedBuilder();
-	
-	private PigDice pd1 = new PigDice();
-	private PigDice pd2 = new PigDice();
-	private int maxScore = 100;
-	
-	private Message msg = null;
-	private String pig = "https://static-00.iconduck.com/assets.00/pig-emoji-2048x1814-ohcetx18.png";
-	private String player1 = "blank";
-	private String player2 = "blank";
-	private String uniC1 = "U+0031 U+20E3";
-	private String uniC2 = "U+0032 U+20E3";
-	private String uniCx = "U+274C";
-	private String uniCcheck = "U+2705";
-	private String uniCdice = "U+1F3B2";
-	private String uniCgreenX = "U+274E";
-	private String emj1 = "1⃣";
-	private String emj2 = "2⃣";
-	private String emjX = "❌";
-	private String emjCheck = "✅";
-	private String emjDice = "🎲";
-	private String emjgreenX = "❎";
-	
-	@Override
-	public void onMessageReceived(@NotNull MessageReceivedEvent event)
-	{
-		
-		String message = event.getMessage().getContentRaw();
-		String[] messageSent = event.getMessage().getContentRaw().split(" ");
-		
-		if (message.equals("Piggy Dice Time") && event.getMessage().getAuthor().isBot()) 
-		{
-			eb.clear();
-			eb.setTitle("First to 100");
-			eb.setDescription("REACT TO JOIN AS PLAYER 1 \r\nRed X to quit");
-			eb.addField("Rules",  "1. Take turns to roll as many times as you want in one turn.\r\n"
-					+ "2. A player scores the sum of the two dice thrown\r\n"
-					+ "3. If a single number 1 is thrown on either die, the score for that whole turn is lost. (Pigged Out!)\r\n"
-					+ "4. However, a double 1 counts as 25 points. ", true);
-			
-			eb.setColor(Color.MAGENTA);
-			eb.setImage(pig);
-			msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-			msg.addReaction(Emoji.fromUnicode(uniC1)).queue();
-			msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
-			
+    private EmbedBuilder eb = new EmbedBuilder();
 
-			
-		}
-	}
-	
-	@Override
-    public void onMessageReactionAdd(@NotNull MessageReactionAddEvent event)
+    private PigDice pd1 = new PigDice();
+    private PigDice pd2 = new PigDice();
+    private int maxScore = 100;
+    private int activePlayer = 1; // 1 = Player 1, 2 = Player 2
+
+    private Message msg = null;
+    private String pig = "https://static-00.iconduck.com/assets.00/pig-emoji-2048x1814-ohcetx18.png";
+    private String player1 = "blank";
+    private String player2 = "blank";
+    private String uniC1 = "U+0031 U+20E3";
+    private String uniC2 = "U+0032 U+20E3";
+    private String uniCx = "U+274C";
+    private String uniCcheck = "U+2705";
+    private String uniCdice = "U+1F3B2";
+    private String uniCgreenX = "U+274E";
+    private String emj1 = "1⃣";
+    private String emj2 = "2⃣";
+    private String emjX = "❌";
+    private String emjCheck = "✅";
+    private String emjDice = "🎲";
+    private String emjgreenX = "❎";
+
+    @Override
+    public void onMessageReceived(@NotNull MessageReceivedEvent event)
     {
+        String message = event.getMessage().getContentRaw();
 
-    	if (!event.getMember().getUser().isBot())
-    	{
-    		if (event.getEmoji().getAsReactionCode().equals(emj1))
-    		{    			
-    			msg.delete().queue();
-    			
-    			eb.setDescription("REACT TO JOIN AS PLAYER 2 \r\nRed X to quit");
-    			player1 = event.getMember().getNickname();	
-    			eb.addField("Player 1", player1, true);
-    			msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-    			msg.addReaction(Emoji.fromUnicode(uniC2)).queue();
-    			msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
+        if (message.equals("Piggy Dice Time") && event.getMessage().getAuthor().isBot())
+        {
+            eb.clear();
+            eb.setTitle("🐷 Piggy Dice Challenge");
+            eb.setDescription("### 📥 Lobby Setup\nReact with 1⃣ to step up as **Player 1**!\n\n*Click ❌ at any time to scrap this game.*");
+            eb.addField("📜 Official Rules",
+                    "1️⃣ Take turns rolling as many times as you dare.\n"
+                            + "2️⃣ Earn the **sum** of both rolled dice faces.\n"
+                            + "3️⃣ Roll a single **1**? You **Pig Out** and lose all turn points!\n"
+                            + "4️⃣ Roll **Double 1s**? Bank a massive **+25 points** instantly.", false);
 
-    		}
-    		if(event.getEmoji().getAsReactionCode().equals(emj2))
-    		{
-    			
-    			
-    			player2 = event.getMember().getNickname();
-    			
-//    			if (player1.equals(player2))
-//    			{
-//    				event.getChannel().sendMessage("you already joined " + player2).queue();
-//    			}
-//    			else
-    			{
-    				msg.delete().queue();
-        			eb.setDescription("READY TO PLAY?? \r\nRed X to quit");
-        			eb.addField("Player 2", player2, true);
-        			msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-        			msg.addReaction(Emoji.fromUnicode(uniCcheck)).queue();		
-        			msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
-    			}
-    			
+            eb.setColor(Color.ORANGE); // Warm lobby color
+            eb.setImage(pig);
+            msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
+            msg.addReaction(Emoji.fromUnicode(uniC1)).queue();
+            msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
+        }
+    }
 
-    		}
-    		if (event.getEmoji().getAsReactionCode().equals(emjX))
-    		{
-    			msg.delete().queue();
-    		}
-    		if (event.getEmoji().getAsReactionCode().equals(emjCheck))
-    		{
-    			msg.delete().queue();
-    			eb.clear();
-    			eb.setDescription("ROLL THE DICE\r\n" + player1);
-    			eb.setThumbnail(pig);
-    			msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-    			msg.addReaction(Emoji.fromUnicode(uniCdice)).queue();		
-    			msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
-    		}
-    		if (event.getEmoji().getAsReactionCode().equals(emjDice))
-    		{
-    			if (eb.getDescriptionBuilder().toString().equals("ROLL THE DICE\r\n" + player1))
-    			{
-    				if(event.getMember().getNickname().equals(player1))
-        			{
-        				msg.delete().queue();
+    @Override
+    public void onMessageReactionAdd(@NotNull MessageReactionAddEvent event) {
+        if (event.getUser().isBot()) return;
 
-    					
-        				pd1.rollDice();
-        				// Report the result
-        				eb.clear();
-        				eb.setDescription("ROLL THE DICE\r\n" + player1);
-        				eb.addField("Points Scored", pd1.lastRoll() + " scored " + pd1.evaluate() + " points.", true);
+        // Auto-remove reaction to instantly reset UI buttons
+        event.getReaction().removeReaction(event.getUser()).queue();
 
-        				// Did the player pig out?
-        				if (pd1.piggedOut())
-        				{	
-        					eb.clear();
-        					eb.addField("PIGGED OUT!", player1 + " pigged out this turn, yikes", true);
-        					eb.addField("NEXT TURN", "It's " + player2 + "'s turn to roll", true);	
-    	        			eb.setThumbnail(pig);
-        					msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-    	        			
-    	        			eb.clear();
-    	        			eb.setDescription("ROLL THE DICE\r\n" + player2);
-    	        			eb.setThumbnail(pig);
-    	        			msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-    	        			msg.addReaction(Emoji.fromUnicode(uniCdice)).queue();		
-    	        			msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
+        String reactionCode = event.getEmoji().getAsReactionCode();
+        String userNickname = event.getMember().getEffectiveName();
 
-        				}
-            			
-            			else
-            			{
-            				//
-            				// Roll again; see if the user wants to roll again to add to total or pass and keep current points
-            				//
-    
-        					eb.addField("ROLL AGAIN?", "Your current roll is " + pd1.currentRound() + " points. \r\nGreen X to end turn", true);
-        					eb.setThumbnail(pig);
-                			msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-                			msg.addReaction(Emoji.fromUnicode(uniCdice)).queue();
-                			msg.addReaction(Emoji.fromUnicode(uniCgreenX)).queue();		
-                			msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
+        // 1. JOINING LOGIC
+        if (reactionCode.equals(emj1)) {
+            player1 = userNickname;
+            eb.clear();
+            eb.setTitle("🐷 Piggy Dice Challenge");
+            eb.setColor(Color.ORANGE);
+            eb.setDescription("### 📥 Lobby Setup\nReact with 2⃣ to join as **Player 2**!");
+            eb.addField("⚔️ Contenders", "• **Player 1:** `" + player1 + "`\n• **Player 2:** *Waiting...*", false);
 
-            				
-            			} 
+            msg.editMessageEmbeds(eb.build()).queue();
 
-        			}
-        			else
-            		{
-            			event.getChannel().sendMessage("uh you're not " + player1 + " lol").queue();
-            		}
-    			}
-    			if (eb.getDescriptionBuilder().toString().equals("ROLL THE DICE\r\n" + player2))
-    			{
-    				if(event.getMember().getNickname().equals(player2))
-    				{
-    					msg.delete().queue();
+            msg.clearReactions().queue(success -> {
+                msg.addReaction(Emoji.fromUnicode(uniC2)).queue();
+                msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
+            });
+        }
 
-    					
-        				pd2.rollDice();
-        				// Report the result
-        				eb.clear();
-        				eb.setDescription("ROLL THE DICE\r\n" + player2);
-        				eb.addField("Points Scored", pd2.lastRoll() + " scored " + pd2.evaluate() + " points.", true);
+        if (reactionCode.equals(emj2)) {
+            player2 = userNickname;
 
-        				// Did the player pig out?
-        				if (pd2.piggedOut())
-        				{	
-        					eb.clear();
-        					eb.addField("PIGGED OUT!", player2 + " pigged out this turn, yikes", true);
-							eb.addField("NEXT TURN", "It's " + player1 + "'s turn to roll", true);
-							eb.setThumbnail(pig);
-        					msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
+            eb.clear();
+            eb.setTitle("🐷 Piggy Dice Challenge");
+            eb.setColor(Color.ORANGE);
+            eb.setDescription("### 🎲 Lobby Full!\nAre you both ready to start the match?\nClick ✅ to initiate the board.");
+            eb.addField("⚔️ Contenders", "• **Player 1:** `" + player1 + "`\n• **Player 2:** `" + player2 + "`", false);
 
-        					eb.clear();
-        					eb.addField("Current score", "Player 1: "+ pd1.currentTotal() + "\r\nPlayer 2: " + pd2.currentTotal() + "\r\nThe goal is " + maxScore + " points." , true );
-        					eb.setThumbnail(pig);
-        					msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
+            msg.editMessageEmbeds(eb.build()).queue();
 
-        					
-							if (pd1.currentTotal() >= maxScore && pd2.currentTotal() < maxScore)
-							{
+            msg.clearReactions().queue(success -> {
+                msg.addReaction(Emoji.fromUnicode(uniCcheck)).queue();
+                msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
+            });
+        }
 
-								eb.clear();
-								eb.setTitle("GAME OVER");
-								eb.setDescription(player1 + " wins!");
-								eb.setImage(pig);
-	        					msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-	        					return;
+        if (reactionCode.equals(emjX)) {
+            msg.delete().queue();
+            return;
+        }
 
-								
-							}
-							else if (pd2.currentTotal() >= maxScore && pd1.currentTotal() < maxScore)
-							{
-								eb.clear();
-								eb.setTitle("GAME OVER");
-								eb.setDescription(player2 + " wins!");
-								eb.setImage(pig);
-	        					msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-	        					return;
-							}
-							else if((pd2.currentTotal() >= maxScore && pd1.currentTotal() >= maxScore))
-							{
-								eb.clear();
-								eb.setTitle("GAME OVER");
-								eb.setDescription("TIE GAME!");
-								eb.setImage(pig);
-	        					msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-	        					return;
-							}
-							else
-							{
-	    	        			
-	    	        			eb.clear();
-	    	        			eb.setDescription("ROLL THE DICE\r\n" + player1);
-	    	        			eb.setThumbnail(pig);
-	    	        			msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-	    	        			msg.addReaction(Emoji.fromUnicode(uniCdice)).queue();		
-	    	        			msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
-							}
+        if (reactionCode.equals(emjCheck)) {
+            activePlayer = 1;
 
-        					
-    	        			
-    	    				
-    	    				
+            pd1 = new PigDice();
+            pd2 = new PigDice();
 
-        				}
-            			
-            			else
-            			{
-            				//
-            				// Roll again; see if the user wants to roll again to add to total or pass and keep current points
-            				//
-    
-        					eb.addField("ROLL AGAIN?", "Your current roll is " + pd2.currentRound() + " points. \r\nGreen X to end turn", true);
-        					eb.setThumbnail(pig);
-                			msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-                			msg.addReaction(Emoji.fromUnicode(uniCdice)).queue();
-                			msg.addReaction(Emoji.fromUnicode(uniCgreenX)).queue();		
-                			msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
+            renderGameBoard(player1, "🏁 The match has officially commenced! Safe rolling out there.", Color.MAGENTA);
 
-            				
-            			} 
+            msg.clearReactions().queue(success -> {
+                msg.addReaction(Emoji.fromUnicode(uniCdice)).queue();
+                msg.addReaction(Emoji.fromUnicode(uniCgreenX)).queue();
+                msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
+            });
+        }
 
-    				}
-    				else
-            		{
-            			event.getChannel().sendMessage("uh you're not " + player2 + " lol").queue();
-            		}
-    			}
-    			
-    		}
-    		if (event.getEmoji().getAsReactionCode().equals(emjgreenX))
-    		{
-    			if(eb.getDescriptionBuilder().toString().equals("ROLL THE DICE\r\n" + player1))
-    			{
-    				if(event.getMember().getNickname().equals(player1))
-        			{
-	    				msg.delete().queue();
-	    				int roundScore = pd1.save();
-	    				eb.clear();
-	    				eb.setTitle(player1 + "'s Round Results");
-	    				eb.addField("Round Total", "" + roundScore, true);
-	    				eb.addField("Total Score", "" + pd1.currentTotal(), true);
-	    				eb.addField("NEXT TURN", "It's " + player2 + "'s turn to roll", true);
-	    				eb.setThumbnail(pig);
-	        			msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-	        			
-	        			eb.clear();
-	        			eb.setDescription("ROLL THE DICE\r\n" + player2);
-	        			eb.setThumbnail(pig);
-	        			msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-	        			msg.addReaction(Emoji.fromUnicode(uniCdice)).queue();		
-	        			msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
-        			}
-    
-    			}
-    			if(eb.getDescriptionBuilder().toString().equals("ROLL THE DICE\r\n" + player2))
-    			{
-    				if(event.getMember().getNickname().equals(player2))
-        			{
-	    				msg.delete().queue();
-	    				int roundScore = pd2.save();
-	    				eb.clear();
-	    				eb.setTitle(player2 + "'s Round Results");
-	    				eb.addField("Round Total", "" + roundScore, true);
-	    				eb.addField("Total Score", "" + pd2.currentTotal(), true);
-	    				eb.addField("NEXT TURN", "It's " + player1 + "'s turn to roll", true);
-	    				eb.setThumbnail(pig);
-    					msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
+        // 2. DICE ROLLING LOGIC
+        if (reactionCode.equals(emjDice)) {
+            // PLAYER 1 TURN
+            if (activePlayer == 1 && userNickname.equals(player1)) {
+                pd1.rollDice();
 
-	    				eb.clear();
-	    				eb.addField("Current score", "Player 1: "+ pd1.currentTotal() + "\r\nPlayer 2: " + pd2.currentTotal() + "\r\nThe goal is " + maxScore + " points." , true );
-    					eb.setThumbnail(pig);
+                if (pd1.piggedOut()) {
+                    activePlayer = 2;
+                    pd1.clearTurnPool();
+                    renderGameBoard(player2, "🚨 **" + player1 + "** pigged out! That turn pool turned to dust. Turn hands over to **" + player2 + "**.", Color.RED);
+                } else {
+                    int oldRoundScore = pd1.currentRound();
+                    int newRoundScore = pd1.evaluate();
+                    int pointsThisThrow = newRoundScore - oldRoundScore;
 
-    					msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
+                    renderRollResult(player1, pd1.lastRoll(), pointsThisThrow, newRoundScore, pd1.currentTotal());
+                }
+            }
+            // PLAYER 2 TURN
+            else if (activePlayer == 2 && userNickname.equals(player2)) {
+                pd2.rollDice();
 
-						if (pd1.currentTotal() >= maxScore && pd2.currentTotal() < maxScore)
-						{
-        					msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
+                if (pd2.piggedOut()) {
+                    activePlayer = 1;
+                    pd2.clearTurnPool();
+                    renderGameBoard(player1, "🚨 **" + player2 + "** pigged out! That turn pool turned to dust. Turn hands over to **" + player1 + "**.", Color.RED);
+                } else {
+                    int oldRoundScore = pd2.currentRound();
+                    int newRoundScore = pd2.evaluate();
+                    int pointsThisThrow = newRoundScore - oldRoundScore;
 
-							eb.clear();
-							eb.setTitle("GAME OVER");
-							eb.setDescription(player1 + " wins!");
-							eb.setImage(pig);
-        					msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-        					return;
+                    renderRollResult(player2, pd2.lastRoll(), pointsThisThrow, newRoundScore, pd2.currentTotal());
+                }
+            }
+        }
 
-							
-						}
-						else if (pd2.currentTotal() >= maxScore && pd1.currentTotal() < maxScore)
-						{
-							eb.clear();
-							eb.setTitle("GAME OVER");
-							eb.setDescription(player2 + " wins!");
-							eb.setImage(pig);
-        					msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-        					return;
-						}
-						else if((pd2.currentTotal() >= maxScore && pd1.currentTotal() >= maxScore))
-						{
-							eb.clear();
-							eb.setTitle("GAME OVER");
-							eb.setDescription("TIE GAME!");
-							eb.setImage(pig);
-        					msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-        					return;
-						}
-	    				
-	    				
-	    				
-	        			
-	        			eb.clear();
-	        			eb.setDescription("ROLL THE DICE\r\n" + player1);
-	        			eb.setThumbnail(pig);
-	        			msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-	        			msg.addReaction(Emoji.fromUnicode(uniCdice)).queue();		
-	        			msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
-	        			
-	        			
-	        			
-	        			
-	        			
-	        			
-	        			
-	        			
-        			}
-    
-    			}
-    			
+        // 3. BANKING / SAVE LOGIC
+        if (reactionCode.equals(emjgreenX)) {
+            if (activePlayer == 1 && userNickname.equals(player1)) {
+                pd1.save();
 
-   
-    		}
+                if (pd1.currentTotal() >= maxScore) {
+                    handleGameOver(player1);
+                    return;
+                }
 
+                activePlayer = 2;
+                renderGameBoard(player2, "✨ **" + player1 + "** played it safe and banked points total! Current Standing: `" + pd1.currentTotal() + "` points.", Color.GREEN);
+            }
+            else if (activePlayer == 2 && userNickname.equals(player2)) {
+                pd2.save();
 
+                if (pd2.currentTotal() >= maxScore) {
+                    handleGameOver(player2);
+                    return;
+                }
 
+                activePlayer = 1;
+                renderGameBoard(player1, "✨ **" + player2 + " ** played it safe and banked points total! Current Standing: `" + pd2.currentTotal() + "` points.", Color.GREEN);
+            }
+        }
+    }
 
-    	}
+    private void renderGameBoard(String activePlayerName, String statusUpdate, Color sideBorderColor) {
+        eb.clear();
+        eb.setTitle("🎲 Pig Dice Arena");
+        eb.setColor(sideBorderColor);
+        eb.setDescription("### 🔴 Active Turn: **" + activePlayerName + "**\nUse the buttons below to **Roll** (🎲) or **Bank** (❎).");
+
+        eb.addField("📢 Live Feed Updates", statusUpdate, false);
+        eb.addField("📊 Leaderboard Standings",
+                "🏆 **" + player1 + ":** `" + pd1.currentTotal() + " / 100` pts\n" +
+                        "🥈 **" + player2 + ":** `" + pd2.currentTotal() + " / 100` pts", false);
+
+        eb.setThumbnail(pig);
+        eb.setFooter("System Stats Engine | P1 Banked: " + pd1.currentTotal() + " | P2 Banked: " + pd2.currentTotal());
+        msg.editMessageEmbeds(eb.build()).queue();
+    }
+
+    private void renderRollResult(String rollerName, String diceRoll, int rollVal, int currentPool, int totalBanked) {
+        eb.clear();
+        eb.setTitle("🎲 Pig Dice Arena");
+        eb.setColor(Color.BLUE); // Steady blue color while hot rolling
+        eb.setDescription("### ⚡ Active Turn: **" + rollerName + "**\nKeep rolling or bank your points safely!");
+
+        eb.addField("🎲 Last Throw Action", "Rolled: **" + diceRoll + "** (Gained `+" + rollVal + "` points)", false);
+        eb.addField("💰 Current Turn Pool", "Accumulated Risk Pool: `" + currentPool + "` points.", true);
+        eb.addField("🏦 Permanent Bank", "Safe Banked Total: `" + totalBanked + "` points.", true);
+
+        eb.setThumbnail(pig);
+        eb.setFooter("System Stats Engine | Turn Pool: " + currentPool + " | Account Total: " + totalBanked);
+        msg.editMessageEmbeds(eb.build()).queue();
+    }
+
+    private void handleGameOver(String winner) {
+        eb.clear();
+        eb.setTitle("👑 MATCH COMPLETE 🎉");
+        eb.setColor(Color.GREEN);
+        eb.setDescription("## **" + winner + "** has crushed the field!\n" + winner + " successfully crossed `" + maxScore + "` points and won the crown!");
+
+        eb.addField("🏁 Final Leaderboard Records",
+                "• **" + player1 + ":** `" + pd1.currentTotal() + "` points\n" +
+                        "• **" + player2 + ":** `" + pd2.currentTotal() + "` points", false);
+
+        eb.setImage(pig);
+        msg.editMessageEmbeds(eb.build()).queue();
+        msg.clearReactions().queue();
     }
 }

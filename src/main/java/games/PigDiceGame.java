@@ -15,7 +15,7 @@ import pigDiceGame.PigDice;
 public class PigDiceGame extends ListenerAdapter {
     private final Map<String, PigDiceSession> activeGames = new ConcurrentHashMap<>();
     private final EmbedBuilder eb = new EmbedBuilder();
-    private final String pig = "https://static-00.iconduck.com/assets.00/pig-emoji-2048x1814-ohcetx18.png";
+    private final String pig = "https://raw.githubusercontent.com/DestinyAbuwa/DiscordJavaBot/master/assets/pig.webp";
 
     @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {

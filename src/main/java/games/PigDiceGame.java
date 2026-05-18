@@ -1,212 +1,230 @@
 package games;
 
 import java.awt.Color;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.jetbrains.annotations.NotNull;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import pigDiceGame.PigDice;
 
-public class PigDiceGame extends ListenerAdapter
-{
-    private EmbedBuilder eb = new EmbedBuilder();
-
-    private PigDice pd1 = new PigDice();
-    private PigDice pd2 = new PigDice();
-    private int maxScore = 100;
-    private int activePlayer = 1; // 1 = Player 1, 2 = Player 2
-
-    private Message msg = null;
-    private String pig = "https://static-00.iconduck.com/assets.00/pig-emoji-2048x1814-ohcetx18.png";
-    private String player1 = "blank";
-    private String player2 = "blank";
-    private String uniC1 = "U+0031 U+20E3";
-    private String uniC2 = "U+0032 U+20E3";
-    private String uniCx = "U+274C";
-    private String uniCcheck = "U+2705";
-    private String uniCdice = "U+1F3B2";
-    private String uniCgreenX = "U+274E";
-    private String emj1 = "1⃣";
-    private String emj2 = "2⃣";
-    private String emjX = "❌";
-    private String emjCheck = "✅";
-    private String emjDice = "🎲";
-    private String emjgreenX = "❎";
+public class PigDiceGame extends ListenerAdapter {
+    private final Map<String, PigDiceSession> activeGames = new ConcurrentHashMap<>();
+    private final EmbedBuilder eb = new EmbedBuilder();
+    private final String pig = "https://static-00.iconduck.com/assets.00/pig-emoji-2048x1814-ohcetx18.png";
 
     @Override
-    public void onMessageReceived(@NotNull MessageReceivedEvent event)
-    {
+    public void onMessageReceived(@NotNull MessageReceivedEvent event) {
         String message = event.getMessage().getContentRaw();
 
-        if (message.equals("Piggy Dice Time") && event.getMessage().getAuthor().isBot())
-        {
+        // Note: Modified back to author matching standard context if needed,
+        // ensure you manage your prefix/bot check definitions here.
+        if (message.equals("Piggy Dice Time")) {
+            String channelId = event.getChannel().getId();
+
+            if (activeGames.containsKey(channelId)) {
+                event.getChannel().sendMessage("⚠️ A Pig Dice game is already active in this channel!").queue();
+                return;
+            }
+
+            PigDiceSession session = new PigDiceSession(channelId);
+
             eb.clear();
             eb.setTitle("🐷 Piggy Dice Challenge");
-            eb.setDescription("### 📥 Lobby Setup\nReact with 1⃣ to step up as **Player 1**!\n\n*Click ❌ at any time to scrap this game.*");
+            eb.setDescription("### 📥 Lobby Setup\nClick the button below to step up as **Player 1**!\n\n*Click ❌ at any time to scrap this game.*");
             eb.addField("📜 Official Rules",
                     "1️⃣ Take turns rolling as many times as you dare.\n"
                             + "2️⃣ Earn the **sum** of both rolled dice faces.\n"
                             + "3️⃣ Roll a single **1**? You **Pig Out** and lose all turn points!\n"
                             + "4️⃣ Roll **Double 1s**? Bank a massive **+25 points** instantly.", false);
 
-            eb.setColor(Color.ORANGE); // Warm lobby color
+            eb.setColor(Color.ORANGE);
             eb.setImage(pig);
-            msg = event.getChannel().sendMessageEmbeds(eb.build()).complete();
-            msg.addReaction(Emoji.fromUnicode(uniC1)).queue();
-            msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
+
+            event.getChannel().sendMessageEmbeds(eb.build())
+                    .setActionRow(
+                            Button.primary("pd_join1", "Join as P1").withEmoji(Emoji.fromUnicode("1️⃣")),
+                            Button.danger("pd_cancel", Emoji.fromUnicode("❌"))
+                    )
+                    .queue(sentMessage -> {
+                        session.setMessage(sentMessage);
+                        activeGames.put(channelId, session);
+                    });
         }
     }
 
     @Override
-    public void onMessageReactionAdd(@NotNull MessageReactionAddEvent event) {
-        if (event.getUser().isBot()) return;
+    public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
+        String componentId = event.getComponentId();
 
-        // Auto-remove reaction to instantly reset UI buttons
-        event.getReaction().removeReaction(event.getUser()).queue();
+        // Filter out button interaction if it doesn't belong to our Pig Dice namespace
+        if (!componentId.startsWith("pd_")) return;
 
-        String reactionCode = event.getEmoji().getAsReactionCode();
-        String userNickname = event.getMember().getEffectiveName();
+        String channelId = event.getChannel().getId();
+        PigDiceSession session = activeGames.get(channelId);
 
-        // 1. JOINING LOGIC
-        if (reactionCode.equals(emj1)) {
-            player1 = userNickname;
-            eb.clear();
-            eb.setTitle("🐷 Piggy Dice Challenge");
-            eb.setColor(Color.ORANGE);
-            eb.setDescription("### 📥 Lobby Setup\nReact with 2⃣ to join as **Player 2**!");
-            eb.addField("⚔️ Contenders", "• **Player 1:** `" + player1 + "`\n• **Player 2:** *Waiting...*", false);
-
-            msg.editMessageEmbeds(eb.build()).queue();
-
-            msg.clearReactions().queue(success -> {
-                msg.addReaction(Emoji.fromUnicode(uniC2)).queue();
-                msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
-            });
-        }
-
-        if (reactionCode.equals(emj2)) {
-            player2 = userNickname;
-
-            eb.clear();
-            eb.setTitle("🐷 Piggy Dice Challenge");
-            eb.setColor(Color.ORANGE);
-            eb.setDescription("### 🎲 Lobby Full!\nAre you both ready to start the match?\nClick ✅ to initiate the board.");
-            eb.addField("⚔️ Contenders", "• **Player 1:** `" + player1 + "`\n• **Player 2:** `" + player2 + "`", false);
-
-            msg.editMessageEmbeds(eb.build()).queue();
-
-            msg.clearReactions().queue(success -> {
-                msg.addReaction(Emoji.fromUnicode(uniCcheck)).queue();
-                msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
-            });
-        }
-
-        if (reactionCode.equals(emjX)) {
-            msg.delete().queue();
+        // Security check: Ignore clicks if session doesn't exist or doesn't match the active game message ID
+        if (session == null || !event.getMessageId().equals(session.getMessage().getId())) {
+            event.reply("This game session is no longer valid.").setEphemeral(true).queue();
             return;
         }
 
-        if (reactionCode.equals(emjCheck)) {
-            activePlayer = 1;
+        // Defer editing immediately to notify Discord we acknowledge the interaction smoothly
+        event.deferEdit().queue();
 
-            pd1 = new PigDice();
-            pd2 = new PigDice();
+        String userNickname = event.getMember().getEffectiveName();
 
-            renderGameBoard(player1, "🏁 The match has officially commenced! Safe rolling out there.", Color.MAGENTA);
+        // 1. LOBBY JOINING & SETUP LOGIC
+        if (componentId.equals("pd_join1")) {
+            session.setPlayer1(userNickname);
 
-            msg.clearReactions().queue(success -> {
-                msg.addReaction(Emoji.fromUnicode(uniCdice)).queue();
-                msg.addReaction(Emoji.fromUnicode(uniCgreenX)).queue();
-                msg.addReaction(Emoji.fromUnicode(uniCx)).queue();
-            });
+            eb.clear();
+            eb.setTitle("🐷 Piggy Dice Challenge");
+            eb.setColor(Color.ORANGE);
+            eb.setDescription("### 📥 Lobby Setup\nClick the button below to join as **Player 2**!");
+            eb.addField("⚔️ Contenders", "• **Player 1:** `" + session.getPlayer1() + "`\n• **Player 2:** *Waiting...*", false);
+
+            event.getHook().editMessageEmbedsById(session.getMessage().getId(), eb.build())
+                    .setActionRow(
+                            Button.primary("pd_join2", "Join as P2").withEmoji(Emoji.fromUnicode("2️⃣")),
+                            Button.danger("pd_cancel", Emoji.fromUnicode("❌"))
+                    ).queue();
         }
 
-        // 2. DICE ROLLING LOGIC
-        if (reactionCode.equals(emjDice)) {
+        if (componentId.equals("pd_join2")) {
+            // Prevent Player 1 from joining as Player 2
+            if (userNickname.equals(session.getPlayer1())) {
+                return;
+            }
+
+            session.setPlayer2(userNickname);
+
+            eb.clear();
+            eb.setTitle("🐷 Piggy Dice Challenge");
+            eb.setColor(Color.ORANGE);
+            eb.setDescription("### 🎲 Lobby Full!\nAre you both ready to start the match?\nClick the checkmark to initiate the board.");
+            eb.addField("⚔️ Contenders", "• **Player 1:** `" + session.getPlayer1() + "`\n• **Player 2:** `" + session.getPlayer2() + "`", false);
+
+            event.getHook().editMessageEmbedsById(session.getMessage().getId(), eb.build())
+                    .setActionRow(
+                            Button.success("pd_start", Emoji.fromUnicode("✅")),
+                            Button.danger("pd_cancel", Emoji.fromUnicode("❌"))
+                    ).queue();
+        }
+
+        if (componentId.equals("pd_cancel")) {
+            event.getHook().deleteMessageById(session.getMessage().getId()).queue();
+            activeGames.remove(channelId);
+            return;
+        }
+
+        if (componentId.equals("pd_start")) {
+            session.setActivePlayer(1);
+            session.resetPd1();
+            session.resetPd2();
+
+            renderGameBoard(session, session.getPlayer1(), "🏁 The match has officially commenced! Safe rolling out there.", Color.MAGENTA);
+        }
+
+        // 2. IN-GAME DICE ROLLING LOGIC
+        if (componentId.equals("pd_roll")) {
+            PigDice pd1 = session.getPd1();
+            PigDice pd2 = session.getPd2();
+
             // PLAYER 1 TURN
-            if (activePlayer == 1 && userNickname.equals(player1)) {
+            if (session.getActivePlayer() == 1 && userNickname.equals(session.getPlayer1())) {
                 pd1.rollDice();
 
                 if (pd1.piggedOut()) {
-                    activePlayer = 2;
+                    session.setActivePlayer(2);
                     pd1.clearTurnPool();
-                    renderGameBoard(player2, "🚨 **" + player1 + "** pigged out! That turn pool turned to dust. Turn hands over to **" + player2 + "**.", Color.RED);
+                    renderGameBoard(session, session.getPlayer2(), "🚨 **" + session.getPlayer1() + "** pigged out! That turn pool turned to dust. Turn hands over to **" + session.getPlayer2() + "**.", Color.RED);
                 } else {
                     int oldRoundScore = pd1.currentRound();
                     int newRoundScore = pd1.evaluate();
                     int pointsThisThrow = newRoundScore - oldRoundScore;
 
-                    renderRollResult(player1, pd1.lastRoll(), pointsThisThrow, newRoundScore, pd1.currentTotal());
+                    renderRollResult(session, session.getPlayer1(), pd1.lastRoll(), pointsThisThrow, newRoundScore, pd1.currentTotal());
                 }
             }
             // PLAYER 2 TURN
-            else if (activePlayer == 2 && userNickname.equals(player2)) {
+            else if (session.getActivePlayer() == 2 && userNickname.equals(session.getPlayer2())) {
                 pd2.rollDice();
 
                 if (pd2.piggedOut()) {
-                    activePlayer = 1;
+                    session.setActivePlayer(1);
                     pd2.clearTurnPool();
-                    renderGameBoard(player1, "🚨 **" + player2 + "** pigged out! That turn pool turned to dust. Turn hands over to **" + player1 + "**.", Color.RED);
+                    renderGameBoard(session, session.getPlayer1(), "🚨 **" + session.getPlayer2() + "** pigged out! That turn pool turned to dust. Turn hands over to **" + session.getPlayer1() + "**.", Color.RED);
                 } else {
                     int oldRoundScore = pd2.currentRound();
                     int newRoundScore = pd2.evaluate();
                     int pointsThisThrow = newRoundScore - oldRoundScore;
 
-                    renderRollResult(player2, pd2.lastRoll(), pointsThisThrow, newRoundScore, pd2.currentTotal());
+                    renderRollResult(session, session.getPlayer2(), pd2.lastRoll(), pointsThisThrow, newRoundScore, pd2.currentTotal());
                 }
             }
         }
 
         // 3. BANKING / SAVE LOGIC
-        if (reactionCode.equals(emjgreenX)) {
-            if (activePlayer == 1 && userNickname.equals(player1)) {
+        if (componentId.equals("pd_bank")) {
+            PigDice pd1 = session.getPd1();
+            PigDice pd2 = session.getPd2();
+
+            if (session.getActivePlayer() == 1 && userNickname.equals(session.getPlayer1())) {
                 pd1.save();
 
-                if (pd1.currentTotal() >= maxScore) {
-                    handleGameOver(player1);
+                if (pd1.currentTotal() >= session.getMaxScore()) {
+                    handleGameOver(session, session.getPlayer1());
                     return;
                 }
 
-                activePlayer = 2;
-                renderGameBoard(player2, "✨ **" + player1 + "** played it safe and banked points total! Current Standing: `" + pd1.currentTotal() + "` points.", Color.GREEN);
+                session.setActivePlayer(2);
+                renderGameBoard(session, session.getPlayer2(), "✨ **" + session.getPlayer1() + "** played it safe and banked points total! Current Standing: `" + pd1.currentTotal() + "` points.", Color.GREEN);
             }
-            else if (activePlayer == 2 && userNickname.equals(player2)) {
+            else if (session.getActivePlayer() == 2 && userNickname.equals(session.getPlayer2())) {
                 pd2.save();
 
-                if (pd2.currentTotal() >= maxScore) {
-                    handleGameOver(player2);
+                if (pd2.currentTotal() >= session.getMaxScore()) {
+                    handleGameOver(session, session.getPlayer2());
                     return;
                 }
 
-                activePlayer = 1;
-                renderGameBoard(player1, "✨ **" + player2 + " ** played it safe and banked points total! Current Standing: `" + pd2.currentTotal() + "` points.", Color.GREEN);
+                session.setActivePlayer(1);
+                renderGameBoard(session, session.getPlayer1(), "✨ **" + session.getPlayer2() + " ** played it safe and banked points total! Current Standing: `" + pd2.currentTotal() + "` points.", Color.GREEN);
             }
         }
     }
 
-    private void renderGameBoard(String activePlayerName, String statusUpdate, Color sideBorderColor) {
+    private void renderGameBoard(PigDiceSession session, String activePlayerName, String statusUpdate, Color sideBorderColor) {
         eb.clear();
         eb.setTitle("🎲 Pig Dice Arena");
         eb.setColor(sideBorderColor);
-        eb.setDescription("### 🔴 Active Turn: **" + activePlayerName + "**\nUse the buttons below to **Roll** (🎲) or **Bank** (❎).");
+        eb.setDescription("### 🔴 Active Turn: **" + activePlayerName + "**\nUse the buttons below to **Roll** or **Bank**.");
 
         eb.addField("📢 Live Feed Updates", statusUpdate, false);
         eb.addField("📊 Leaderboard Standings",
-                "🏆 **" + player1 + ":** `" + pd1.currentTotal() + " / 100` pts\n" +
-                        "🥈 **" + player2 + ":** `" + pd2.currentTotal() + " / 100` pts", false);
+                "🏆 **" + session.getPlayer1() + ":** `" + session.getPd1().currentTotal() + " / 100` pts\n" +
+                        "🥈 **" + session.getPlayer2() + ":** `" + session.getPd2().currentTotal() + " / 100` pts", false);
 
         eb.setThumbnail(pig);
-        eb.setFooter("System Stats Engine | P1 Banked: " + pd1.currentTotal() + " | P2 Banked: " + pd2.currentTotal());
-        msg.editMessageEmbeds(eb.build()).queue();
+        eb.setFooter("System Stats Engine | P1 Banked: " + session.getPd1().currentTotal() + " | P2 Banked: " + session.getPd2().currentTotal());
+
+        session.getMessage().editMessageEmbeds(eb.build())
+                .setActionRow(
+                        Button.primary("pd_roll", "Roll").withEmoji(Emoji.fromUnicode("🎲")),
+                        Button.success("pd_bank", "Bank").withEmoji(Emoji.fromUnicode("❎")),
+                        Button.danger("pd_cancel", Emoji.fromUnicode("❌"))
+                ).queue();
     }
 
-    private void renderRollResult(String rollerName, String diceRoll, int rollVal, int currentPool, int totalBanked) {
+    private void renderRollResult(PigDiceSession session, String rollerName, String diceRoll, int rollVal, int currentPool, int totalBanked) {
         eb.clear();
         eb.setTitle("🎲 Pig Dice Arena");
-        eb.setColor(Color.BLUE); // Steady blue color while hot rolling
+        eb.setColor(Color.BLUE);
         eb.setDescription("### ⚡ Active Turn: **" + rollerName + "**\nKeep rolling or bank your points safely!");
 
         eb.addField("🎲 Last Throw Action", "Rolled: **" + diceRoll + "** (Gained `+" + rollVal + "` points)", false);
@@ -215,21 +233,30 @@ public class PigDiceGame extends ListenerAdapter
 
         eb.setThumbnail(pig);
         eb.setFooter("System Stats Engine | Turn Pool: " + currentPool + " | Account Total: " + totalBanked);
-        msg.editMessageEmbeds(eb.build()).queue();
+
+        session.getMessage().editMessageEmbeds(eb.build())
+                .setActionRow(
+                        Button.primary("pd_roll", "Roll").withEmoji(Emoji.fromUnicode("🎲")),
+                        Button.success("pd_bank", "Bank").withEmoji(Emoji.fromUnicode("❎")),
+                        Button.danger("pd_cancel", Emoji.fromUnicode("❌"))
+                ).queue();
     }
 
-    private void handleGameOver(String winner) {
+    private void handleGameOver(PigDiceSession session, String winner) {
         eb.clear();
         eb.setTitle("👑 MATCH COMPLETE 🎉");
         eb.setColor(Color.GREEN);
-        eb.setDescription("## **" + winner + "** has crushed the field!\n" + winner + " successfully crossed `" + maxScore + "` points and won the crown!");
+        eb.setDescription("## **" + winner + "** has crushed the field!\n" + winner + " successfully crossed `" + session.getMaxScore() + "` points and won the crown!");
 
         eb.addField("🏁 Final Leaderboard Records",
-                "• **" + player1 + ":** `" + pd1.currentTotal() + "` points\n" +
-                        "• **" + player2 + ":** `" + pd2.currentTotal() + "` points", false);
+                "• **" + session.getPlayer1() + ":** `" + session.getPd1().currentTotal() + "` points\n" +
+                        "• **" + session.getPlayer2() + ":** `" + session.getPd2().currentTotal() + "` points", false);
 
         eb.setImage(pig);
-        msg.editMessageEmbeds(eb.build()).queue();
-        msg.clearReactions().queue();
+
+        // Remove button action rows entirely when the match completes
+        session.getMessage().editMessageEmbeds(eb.build()).setComponents().queue();
+
+        activeGames.remove(session.getChannelId());
     }
 }

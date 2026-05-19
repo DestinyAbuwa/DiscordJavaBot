@@ -6,7 +6,8 @@ import events.InteractionEventListener;
 import events.MessageEventListener;
 import events.ReadyEventListener;
 import games.PigDiceGame;
-import games.Connect4Game; // 👈 Add this import!
+import games.Connect4Game;
+import games.WordleGame;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -19,15 +20,17 @@ public class ZoinkBot {
 
         // 1. Instantiate the Connect 4 game container
         Connect4Game c4Game = new Connect4Game();
+        WordleGame wGame = new WordleGame(); // 👈 Instantiate your Wordle Game object!
 
         JDA jda = jdabuilder
                 .enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES)
                 .addEventListeners(
                         new ReadyEventListener(),
                         new MessageEventListener(),
-                        new InteractionEventListener(c4Game), // 👈 2a. Pass it here to handle the /connect-4 slash command
+                        new InteractionEventListener(), // 👈 2a. Pass it here to handle the /connect-4 slash command
                         new PigDiceGame(),
-                        c4Game // 👈 2b. Pass it here so it can listen for button clicks!
+                        c4Game, // 👈 2b. Pass it here so it can listen for button clicks!
+                        wGame
                 )
                 .build();
 

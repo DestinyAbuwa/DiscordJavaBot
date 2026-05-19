@@ -11,13 +11,6 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 public class InteractionEventListener extends ListenerAdapter
 {
 
-    private final Connect4Game c4Game;
-
-    // The constructor that accepts your game engine from ZoinkBot.java
-    public InteractionEventListener(Connect4Game c4Game) {
-        this.c4Game = c4Game;
-    }
-
 	@Override
 	public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event)
 	{

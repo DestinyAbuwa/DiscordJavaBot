@@ -2,31 +2,41 @@
 
 A modular, event-driven Discord bot built with [JDA (Java Discord API)](https://github.com/discord-jda/JDA). This bot is designed with a scalable architecture to host interactive text-based games directly inside Discord channels.
 
-Currently, the bot features a fully playable **Pig Dice Game** and a custom **Connect 4 Engine**, utilizing modern Discord Interactive Components (Buttons) for a fast, responsive user experience.
+Currently, the bot features a fully playable **Pig Dice Game**, a custom **Connect 4 Engine**, and a **Wordle Challenge Mode**, utilizing modern Discord Interactive Components (Buttons & Modals) for a fast, responsive user experience.
 
 ## ✨ Core Features
 
 * **Multi-Server Scalability:** Uses a custom `Session Manager` backed by `ConcurrentHashMap` to track game states by Channel ID. This ensures multiple servers can play games simultaneously without variable overwrites or game-state leaks.
-* **Modern UI:** Replaces slow, rate-limited Discord Reaction Emojis with instant **Discord Buttons** for seamless gameplay.
-* **Dynamic Embeds:** The game boards update in real-time using rich Discord Embeds to track player turns, interactive grids, and scores.
-* **Modular Design:** Built with expansion in mind, making it easy to plug in new game modes in the future.
+* **Modern UI:** Utilizes Discord Buttons and text-input Modals instead of slow, rate-limited emoji reactions.
+* **Smart Command Routing:** Built with a hybrid command architecture! Uses Slash Commands with Dependency Injection to securely cache user states, while triggering custom text-based chain reactions to launch games.
+* **Dynamic Embeds:** Game boards update in real-time using rich Discord Embeds to track player turns, interactive grids, and scores.
 
 ---
 
 ## 🎮 Included Games
 
+### 🟩 Wordle Challenge Arena
+The classic 5-letter hidden word game, completely integrated into Discord!
+* **Command to start:** `/wordle` (or type `Wordy Word Time`)
+* **How to play:**
+    1. The bot generates a random 5-letter word using a dynamically loaded network dictionary.
+    2. The player clicks "Submit Guess" to open a native Discord Modal text-input form.
+    3. Guesses are validated against the dictionary engine.
+    4. The board updates with dynamically colored grid blocks (🟩 🟨 ⬛) to show exact matches and misplaced letters.
+    5. Guess the word in 6 tries or less to win!
+
 ### 🔴 Connect 4 Arena 🟡
 The classic vertical checker-dropping game!
-* **Command to start:** `/connect-4`
+* **Command to start:** `/connect-4` (or type `Connect 4 Time`)
 * **How to play:**
     1. Two players join the lobby via the interactive buttons.
-    2. Players take turns dropping their colored discs (🔴 or 🟡) into a 7-column grid using the numbered Action Row buttons.
+    2. Players take turns dropping their colored discs (🔴 or 🟡) into a 7-column grid using numbered Action Row buttons.
     3. The custom 2D-matrix engine automatically simulates gravity drops and calculates win conditions.
     4. First to align 4 discs horizontally, vertically, or diagonally wins the crown!
 
 ### 🐷 Piggy Dice Challenge
 A high-stakes, push-your-luck dice game!
-* **Command to start:** `/pig-dice`
+* **Command to start:** `/pig-dice` (or type `Piggy Dice Time`)
 * **How to play:**
     1. Two players join the lobby.
     2. Players take turns rolling a virtual die to accumulate points in their temporary "Turn Pool".

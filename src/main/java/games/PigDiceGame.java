@@ -23,7 +23,7 @@ public class PigDiceGame extends ListenerAdapter {
 
         // Note: Modified back to author matching standard context if needed,
         // ensure you manage your prefix/bot check definitions here.
-        if (message.equals("Piggy Dice Time")) {
+        if (message.equalsIgnoreCase("Piggy Dice Time")) {
             String channelId = event.getChannel().getId();
 
             if (activeGames.containsKey(channelId)) {

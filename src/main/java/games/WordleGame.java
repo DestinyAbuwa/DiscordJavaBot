@@ -3,12 +3,10 @@ package games;
 import java.awt.Color;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.jetbrains.annotations.NotNull;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -22,26 +20,47 @@ public class WordleGame extends ListenerAdapter {
     private final Map<String, WordleSession> activeGames = new ConcurrentHashMap<>();
     private final EmbedBuilder eb = new EmbedBuilder();
 
+    // 🕵️‍♂️ This map holds the ID of the human who used the slash command in this channel
+    private final Map<String, PendingPlayer> pendingPlayers = new ConcurrentHashMap<>();
+
+    // A small helper class to pass both name and ID together
+    public static class PendingPlayer {
+        public final String id;
+        public final String name;
+        public PendingPlayer(String id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+    }
+
+    // Your receptionist calls this to register who clicked the slash command
+    public void registerPendingPlayer(String channelId, String userId, String userName) {
+        pendingPlayers.put(channelId, new PendingPlayer(userId, userName));
+    }
+
     @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
         String message = event.getMessage().getContentRaw();
 
-        // Triggers the lobby when a user types "Wordy Word Time" (case-insensitive)
         if (message.equalsIgnoreCase("Wordy Word Time")) {
             String channelId = event.getChannel().getId();
-            String playerId = event.getAuthor().getId();
-            String playerName = event.getMember().getEffectiveName();
 
             if (activeGames.containsKey(channelId)) {
                 event.getChannel().sendMessage("⚠️ A Wordle game is already active in this channel!").queue();
                 return;
             }
 
+            // Grab the real human data from our cache map!
+            PendingPlayer human = pendingPlayers.remove(channelId);
+
+            // Fallback default variables just in case someone types the text manually instead of using the slash command
+            String playerId = (human != null) ? human.id : event.getAuthor().getId();
+            String playerName = (human != null) ? human.name : event.getMember().getEffectiveName();
+
             // Generate a fresh secret word from our engine list
             String secretWord = WordleEngine.generateSecretWord();
             WordleSession session = new WordleSession(channelId, playerId, playerName, secretWord);
 
-            // Dynamically generate the initial game board display
             renderGameBoard(session, "🟩 Welcome to Wordle! Click **Submit Guess** to make your first move.");
 
             event.getChannel().sendMessageEmbeds(eb.build())
@@ -55,6 +74,8 @@ public class WordleGame extends ListenerAdapter {
                     });
         }
     }
+
+
     @Override
     public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
         String componentId = event.getComponentId();

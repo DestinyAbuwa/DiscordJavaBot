@@ -27,7 +27,7 @@ public class ZoinkBot {
                 .addEventListeners(
                         new ReadyEventListener(),
                         new MessageEventListener(),
-                        new InteractionEventListener(), // 👈 2a. Pass it here to handle the /connect-4 slash command
+                        new InteractionEventListener(wGame), // 👈 2a. Pass it here to handle the /connect-4 slash command
                         new PigDiceGame(),
                         c4Game, // 👈 2b. Pass it here so it can listen for button clicks!
                         wGame

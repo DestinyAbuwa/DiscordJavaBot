@@ -15,7 +15,7 @@ public class WordleEngine {
     static {
         try {
             // A clean, public raw text file of official 5-letter Wordle target words
-            URL url = new URL("https://raw.githubusercontent.com/tabatkins/wordle-list/refs/heads/main/words");
+            URL url = new URL("https://raw.githubusercontent.com/DestinyAbuwa/DiscordJavaBot/refs/heads/master/assets/words.txt");
             BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
             String word;
             while ((word = reader.readLine()) != null) {
